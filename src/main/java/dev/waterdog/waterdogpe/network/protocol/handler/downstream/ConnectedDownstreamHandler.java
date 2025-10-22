@@ -76,12 +76,34 @@ public class ConnectedDownstreamHandler extends AbstractDownstreamHandler {
             return PacketSignal.UNHANDLED;
         }
 
-        ServerInfo serverInfo = this.player.getProxy().getServerInfo(packet.getAddress());
-        if (serverInfo == null) {
-            serverInfo = this.player.getProxy().getServerInfo(packet.getAddress(), packet.getPort());
+        String rawAddress = packet.getAddress();
+        String serverKey  = rawAddress;
+        int sep = rawAddress.indexOf('|');
+        if (sep > 0) {
+            serverKey = rawAddress.substring(0, sep);
+            String b64 = rawAddress.substring(sep + 1);
+            try {
+                String arg = new String(
+                    java.util.Base64.getDecoder().decode(b64),
+                    java.nio.charset.StandardCharsets.UTF_8
+                );
+
+                dev.waterdog.waterdogpe.network.protocol.user.HandshakeUtils.setPendingTransferArg(
+                    this.player.getXuid(), arg
+                );
+            } catch (IllegalArgumentException ignored) {}
+
+            packet.setAddress(serverKey);
         }
 
-        FastTransferRequestEvent event = new FastTransferRequestEvent(serverInfo, this.player, packet.getAddress(), packet.getPort());
+        ServerInfo serverInfo = this.player.getProxy().getServerInfo(serverKey);
+        if (serverInfo == null) {
+            serverInfo = this.player.getProxy().getServerInfo(serverKey, packet.getPort());
+        }
+
+        FastTransferRequestEvent event = new FastTransferRequestEvent(
+            serverInfo, this.player, serverKey, packet.getPort()
+        );
         this.player.getProxy().getEventManager().callEvent(event);
 
         if (!event.isCancelled() && event.getServerInfo() != null) {

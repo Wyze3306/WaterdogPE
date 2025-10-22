@@ -53,6 +53,8 @@ public class HandshakeUtils {
     @Getter
     private static final KeyPair privateKeyPair;
 
+    private static final java.util.Map<String, String> pendingTransferArgs = new java.util.concurrent.ConcurrentHashMap<>();
+
     static {
         try {
             KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
@@ -154,6 +156,11 @@ public class HandshakeUtils {
             // Add waterdog attributes
             clientData.addProperty("Waterdog_XUID", xuid);
             clientData.addProperty("Waterdog_IP", ((InetSocketAddress) session.getSocketAddress()).getAddress().getHostAddress());
+
+            String arg = takePendingTransferArg(xuid);
+            if (arg != null) {
+                clientData.addProperty("Transfer_Arg", arg);
+            }
         }
         return clientData;
     }
@@ -177,5 +184,13 @@ public class HandshakeUtils {
         extraData.addProperty("XUID", xuid);
         extraData.addProperty("identity", uuid.toString());
         return extraData;
+    }
+
+    public static void setPendingTransferArg(String xuid, String arg) {
+        if (arg != null) pendingTransferArgs.put(xuid, arg);
+    }
+
+    public static String takePendingTransferArg(String xuid) {
+        return pendingTransferArgs.remove(xuid);
     }
 }
